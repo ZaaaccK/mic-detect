@@ -1,0 +1,149 @@
+# 正确的配置文件格式（删除重复内容）
+audio:
+  path: "/Users/zack/Desktop/mic—detct/redb1.wav"
+
+# 基础参数配置
+frame:
+  duration: 0.1         # 帧时长（秒）
+  hop_length_ratio: 0.5  # 帧移比例
+
+touch:
+  compare_mode: "single_channel"
+  min_channels_to_exceed: 1       # 至少超过1个通道
+  threshold_ratio: 1.3            # 能量阈值比例
+  min_amplitude: 0.1             # 降低最小振幅（避免漏检）
+  consecutive_required: 1         # 连续帧要求
+  debounce_time: 0.5              # 缩短防抖时间（默认1秒太长，快速触发会被过滤）
+  
+clap:
+  rms_threshold: 0.2     # 拍手RMS阈值
+  min_frames: 2          # 拍手最小连续帧
+  min_interval: 2.0      # 拍手最小间隔
+  cooldown: 0.3          # 拍手后冷却时间（0.1秒足够，避免错过早期触摸）
+
+post_clap:
+  active_window: 2.0     # 延长有效检测窗口（从1秒→3秒，确保所有触摸被捕获）
+  sequence_window: 2.0   # 序列合并窗口
+  pattern_window: 2      # 模式窗口大小
+
+
+modes:
+  mode_1:
+    name: "模式1（左到右）"
+    enabled: true
+    logic: "and"  # 所有条件必须同时满足
+    conditions:
+      - channel_a: 4  # 注意：这里的编号是映射后的值（原始0→1，1→2，2→3，3→4）
+        channel_b: 3
+        operator: "before"
+      - channel_a: 4
+        channel_b: 2
+        operator: "before"
+      - channel_a: 1
+        channel_b: 3
+        operator: "before"
+      - channel_a: 1
+        channel_b: 2
+        operator: "before"
+
+  mode_2:
+    name: "模式2（右到左）"
+    enabled: true
+    logic: "and"
+    conditions:
+      - channel_a: 3
+        channel_b: 1
+        operator: "before"
+      - channel_a: 3
+        channel_b: 4
+        operator: "before"
+      - channel_a: 2
+        channel_b: 4
+        operator: "before"
+      - channel_a: 2
+        channel_b: 1
+        operator: "before"
+
+  mode_3:
+    name: "模式3（上到下）"
+    enabled: true
+    logic: "and"
+    conditions:
+      - channel_a: 4
+        channel_b: 1
+        operator: "before"
+      - channel_a: 4
+        channel_b: 2
+        operator: "before"
+      - channel_a: 3
+        channel_b: 1
+        operator: "before"
+      - channel_a: 3
+        channel_b: 2
+        operator: "before"
+
+  mode_4:
+    name: "模式4（下到上）"
+    enabled: true
+    logic: "and"
+    conditions:
+      - channel_a: 1
+        channel_b: 4
+        operator: "before"
+      - channel_a: 2
+        channel_b: 4
+        operator: "before"
+      - channel_a: 1
+        channel_b: 3
+        operator: "before"
+      - channel_a: 2
+        channel_b: 3
+        operator: "before"
+
+  mode_5:
+    name: "1-4/2-3"
+    enabled: true
+    logic: "or"  # 任一条件满足即触发
+    conditions:
+      - channel_a: 1
+        channel_b: 4
+        operator: "before"
+      - channel_a: 2
+        channel_b: 3
+        operator: "before"
+
+  mode_6:
+    name: "4-1/3-2"
+    enabled: true
+    logic: "or"
+    conditions:
+      - channel_a: 4
+        channel_b: 1
+        operator: "before"
+      - channel_a: 3
+        channel_b: 2
+        operator: "before"
+
+  mode_7:
+    name: "4-3/1-2"
+    enabled: true
+    logic: "or"
+    conditions:
+      - channel_a: 4
+        channel_b: 3
+        operator: "before"
+      - channel_a: 1
+        channel_b: 2
+        operator: "before"
+
+  mode_8:
+    name: "3-4/2-1"
+    enabled: true
+    logic: "or"
+    conditions:
+      - channel_a: 3
+        channel_b: 4
+        operator: "before"
+      - channel_a: 2
+        channel_b: 1
+        operator: "before"
