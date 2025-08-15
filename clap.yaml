@@ -1,0 +1,57 @@
+wav_path: "/Users/zack/Desktop/mic-detect/redf2.wav"
+audio:
+  num_channels: 4
+  sample_rate: 16000
+frame:
+  duration: 0.06
+  hop_length_ratio: 0.5
+touch:
+  threshold_ratio: 1.5
+  min_amplitude: 0.01
+  consecutive_required: 1
+  debounce_time: 0.2
+  compare_mode: "average"
+modes:
+  mode_1:
+    name: "模式1（左到右）"
+    enabled: true
+    logic: "or"
+    conditions:
+      - type: "channel_order"  # 明确条件类型
+        channel_a: 4
+        channel_b: 3
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 4
+        channel_b: 2
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 1
+        channel_b: 3
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 1
+        channel_b: 2
+        operator: "before"
+
+  mode_2:
+    name: "模式2（右到左）"
+    enabled: true
+    logic: "or"
+    conditions:
+      - type: "channel_order"
+        channel_a: 3
+        channel_b: 1
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 3
+        channel_b: 4
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 2
+        channel_b: 4
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 2
+        channel_b: 1
+        operator: "before"

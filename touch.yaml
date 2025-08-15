@@ -1,0 +1,62 @@
+wav_path: "/Users/zack/Desktop/mic-detect/redf4.wav"
+audio:
+  num_channels: 4
+  sample_rate: 16000
+frame:
+  duration: 0.06
+  hop_length_ratio: 0.5
+touch:
+  compare_mode: "single_channel"  # 设置为单通道模式
+  threshold_ratio: 1.4            # 能量比较阈值比例
+  min_channels_to_exceed: 2       # 需要超过的其他通道数量（核心参数）
+  min_amplitude: 0.1             # 最小振幅阈值
+  consecutive_required: 1.2         # 触发所需连续帧数
+  debounce_time: 1             # 去抖动时间
+modes:
+  mode_1:
+    name: "left to right"
+    enabled: true
+    logic: "or"
+    conditions:
+      - type: "channel_order"  # 明确条件类型
+        channel_a: 4
+        channel_b: 3
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 4
+        channel_b: 2
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 1
+        channel_b: 3
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 1
+        channel_b: 2
+        operator: "before"
+
+  mode_2:
+    name: "right to left"
+    enabled: true
+    logic: "or"
+    conditions:
+      - type: "channel_order"
+        channel_a: 3
+        channel_b: 1
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 3
+        channel_b: 4
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 2
+        channel_b: 4
+        operator: "before"
+      - type: "channel_order"
+        channel_a: 2
+        channel_b: 1
+        operator: "before"
+  dominant_channel:
+    enabled: true
+    name: "one channel activate"
+    dominant_ratio: 1.6  # 该通道需要比其他所有通道高80%
