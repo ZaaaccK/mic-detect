@@ -11,9 +11,9 @@ def remove_consecutive_duplicates(seq):
     return result
 
 def determine_mode(touch_events, config, simplified_sequence, channel_mapping={0:1, 1:2, 2:3, 3:4}):
-    """基于模式简化序列判断模式，增加了主导通道模式检测"""
+    """基于模式简化序列判断模式，完善主导通道模式检测"""
     modes_cfg = config["modes"]
-    if len(touch_events) < 2 or not simplified_sequence:
+    if len(touch_events) < 1 or not simplified_sequence:  # 主导模式至少需要1个事件
         return None
 
     mapped_simplified = [channel_mapping[ch] for ch in simplified_sequence]
@@ -22,36 +22,20 @@ def determine_mode(touch_events, config, simplified_sequence, channel_mapping={0
         if not mode_cfg["enabled"]:
             continue
         
-        # 处理主导通道模式（新增加的模式）
+        # 处理主导通道模式
         if mode_name == "dominant_channel":
-            # 检查是否配置了该模式的特定参数
+            # 检查是否配置了必要参数
             if "dominant_ratio" not in mode_cfg:
                 continue
                 
-            # 获取最后一个触发事件的通道
-            if not touch_events:
-                continue
-            last_channel = touch_events[-1][1]  # 最后一个事件的通道
+            # 获取最后一个触发事件的完整数据
+            last_event = touch_events[-1]
+            last_time, last_ch, last_rms, other_channels_rms = last_event  # 从事件中提取RMS数据
             
-            # 获取最后一个事件的RMS值（需要从事件中获取，这里假设我们存储了该信息）
-            # 注意：实际使用时需要修改事件存储逻辑，保存RMS值
-            # 这里为了演示，我们假设能获取到最后一次事件的RMS数据
-            # 实际实现时可能需要调整数据结构
-            if len(touch_events) == 0:
-                continue
-                
-            # 假设我们有最后一次事件的RMS数据
-            # 这里需要根据实际数据存储方式调整
-            last_rms = None  # 实际应用中需要正确获取
-            other_channels_rms = None  # 实际应用中需要正确获取
-            
-            # 简单处理：检查最后一个通道是否在最近的序列中占主导地位
-            # 实际应用中需要根据真实RMS数据判断
-            if last_rms is not None and other_channels_rms is not None:
-                # 检查该通道是否高于所有其他通道指定比例
-                all_higher = all(last_rms > mode_cfg["dominant_ratio"] * rms for rms in other_channels_rms)
-                if all_higher:
-                    return mode_cfg["name"]
+            # 检查该通道是否高于所有其他通道指定比例
+            all_higher = all(last_rms > mode_cfg["dominant_ratio"] * rms for rms in other_channels_rms)
+            if all_higher:
+                return f"{mode_cfg['name']} (通道{last_ch})"
             continue
         
         # 原有模式判断逻辑
@@ -78,7 +62,7 @@ def init_detector_state(config):
     return {
         "consecutive_counts": [0] * num_channels,
         "last_trigger_times": [-100] * num_channels,
-        "touch_events": [],  # 存储格式: [(时间, 通道, rms值), ...]
+        "touch_events": [],  # 存储格式: [(时间, 通道, 本通道RMS, 其他通道RMS列表), ...]
         "simplified_sequence": [],
         "current_mode": None,
         "processed_frames": 0
@@ -87,7 +71,7 @@ def init_detector_state(config):
 def detect_touch_pattern(frame, config, detector_state):
     """
     单通道模式下的触摸检测核心函数
-    增加了主导通道模式的支持
+    完善主导通道模式的支持
     """
     # 从配置获取参数
     touch_cfg = config["touch"]
@@ -101,8 +85,7 @@ def detect_touch_pattern(frame, config, detector_state):
     
     trigger_event = None
     compare_mode = touch_cfg.get("compare_mode", "average")
-    # 单通道模式下需要超过的通道数量（核心参数）
-    min_exceed = touch_cfg.get("min_channels_to_exceed", 2)  # 默认需要超过2个通道
+    min_exceed = touch_cfg.get("min_channels_to_exceed", 2)
 
     for ch in range(num_channels):
         ch_val = rms[ch]
@@ -111,16 +94,9 @@ def detect_touch_pattern(frame, config, detector_state):
 
         # 单通道模式判断逻辑
         if compare_mode == "single_channel":
-            # 计算当前通道超过了多少个其他通道
             exceeded_count = sum(ch_val > touch_cfg["threshold_ratio"] * other_val 
                                for other_val in other_channels)
-            
-            # 判断是否超过了足够数量的通道
-            if exceeded_count >= min_exceed:
-                valid = True
-                # 额外检查最小振幅
-                if ch_val <= touch_cfg["min_amplitude"]:
-                    valid = False
+            valid = exceeded_count >= min_exceed and ch_val > touch_cfg["min_amplitude"]
 
         # 更新连续计数
         if valid:
@@ -128,13 +104,18 @@ def detect_touch_pattern(frame, config, detector_state):
         else:
             detector_state["consecutive_counts"][ch] = 0
 
-        # 检查是否触发事件（满足连续帧要求和去抖动）
+        # 检查是否触发事件
         if (valid and 
             detector_state["consecutive_counts"][ch] >= touch_cfg["consecutive_required"] and 
             (current_time - detector_state["last_trigger_times"][ch]) > touch_cfg["debounce_time"]):
             
-            # 记录事件，同时保存RMS值用于主导通道模式检测
-            detector_state["touch_events"].append((current_time, ch, ch_val, other_channels))
+            # 记录事件，保存完整的RMS数据（关键修改）
+            detector_state["touch_events"].append((
+                current_time, 
+                ch, 
+                ch_val,  # 本通道RMS值
+                other_channels.tolist()  # 其他通道RMS值（转为列表方便存储）
+            ))
             detector_state["last_trigger_times"][ch] = current_time
             detector_state["consecutive_counts"][ch] = 0
             trigger_event = (current_time, ch)

@@ -10,9 +10,6 @@ from detect_touch_pattern import (
     detect_touch_pattern
 )
 
-# 设置全局字体
-plt.rcParams['font.sans-serif'] = ['SimHei']       # 用黑体显示中文
-plt.rcParams['axes.unicode_minus'] = False         # 正常显示负号
 
 def read_yaml(config_path):
     """读取YAML配置文件"""
@@ -133,9 +130,35 @@ def main():
     frame_len = int(config["frame"]["duration"] * sr)
     hop_len = int(frame_len * config["frame"]["hop_length_ratio"])
 
-    # 逐帧处理音频
-    print("开始检测触摸模式...")
+    # # 逐帧处理音频
+    # print("开始检测触摸模式...")
+    # for i in range(0, audio.shape[1] - frame_len, hop_len):
+    #     # 提取当前帧
+    #     frame = audio[:, i:i + frame_len]
+        
+    #     # 调用核心检测函数
+    #     result = detect_touch_pattern(frame, config, detector_state)
+    #     results.append(result)
+        
+    #     # 打印检测到的事件
+    #     if result["trigger_event"]:
+    #         t, ch = result["trigger_event"]
+    #         print(f"[{t:.2f}s] 检测到触摸事件 - 通道 {ch} | 序列: {result['simplified_sequence']}")
+    # 逐帧处理音频（添加6秒限制）
+    print("开始检测触摸模式（仅处理前6秒）...")
+    max_process_time = 6.0  # 最大处理时间：6秒
+    frame_len = int(config["frame"]["duration"] * sr)
+    hop_len = int(frame_len * config["frame"]["hop_length_ratio"])
+
     for i in range(0, audio.shape[1] - frame_len, hop_len):
+        # 计算当前帧的开始时间（用于判断是否超过6秒）
+        current_frame_time = i / sr  # 当前帧的起始时间（秒）
+        
+        # 如果当前帧开始时间已超过6秒，停止处理
+        if current_frame_time >= max_process_time:
+            print(f"已处理完前{max_process_time}秒音频，停止处理")
+            break
+        
         # 提取当前帧
         frame = audio[:, i:i + frame_len]
         
